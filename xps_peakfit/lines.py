@@ -95,3 +95,23 @@ register(LineShape(
         ChemicalState("SiO2/organic", 532.5, 0.7),
     ),
 ))
+
+register(LineShape(
+    element="Cr", orbital="2p", so_split_eV=9.3, branch_ratio=0.5,
+    states=(
+        ChemicalState("Cr0", 574.2, 0.4),
+        ChemicalState("Cr2O3", 576.8, 0.6),
+        ChemicalState("Cr6+", 579.5, 0.6),
+    ),
+))
+
+register(LineShape(
+    element="Ni", orbital="2p", so_split_eV=17.3, branch_ratio=0.5,
+    states=(
+        ChemicalState("Ni0", 852.6, 0.4),
+        ChemicalState("NiO", 854.0, 0.6),
+        ChemicalState("Ni(OH)2", 855.9, 0.6),
+        # Ni2p3/2の強いshake-upサテライト（金属: ~858.7 eV）
+        ChemicalState("Ni0_sat", 858.7, 0.8),
+    ),
+))

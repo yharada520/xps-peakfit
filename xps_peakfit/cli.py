@@ -112,8 +112,9 @@ def main(argv: list[str] | None = None) -> int:
                     help="フィット範囲 (eV)")
     ap.add_argument("--auto-range", action="store_true",
                     help="フィット範囲を自動検出")
-    ap.add_argument("--background", default="tougaard",
-                    choices=("shirley", "tougaard", "linear"))
+    ap.add_argument("--background", default="auto",
+                    choices=("auto", "shirley", "tougaard", "linear"),
+                    help="auto: shirley/tougaardの両方をBICで比較して自動選択")
     ap.add_argument("--line", action="append", default=[],
                     help="ラインDBキー（例: Si2p）。全化学状態が候補プールに入る")
     ap.add_argument("--ghost", action="append", default=[], type=parse_ghost,
@@ -163,6 +164,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"\n=== {path.name} | window=({window[0]:g}, {window[1]:g}) eV "
               f"| bg={args.background} ===")
         print(f"BEST: {' + '.join(c.name for c in best.components)} "
+              f"| bg={best.background_kind} "
               f"(BIC={best.bic:.1f}, chi2r={best.reduced_chi2:.2f})")
         for r in best.peak_table():
             print(f"  {r['Component']:<16} cen={r['Center_eV']:>8.3f} eV  "
@@ -171,7 +173,8 @@ def main(argv: list[str] | None = None) -> int:
         if runners:
             print("有力な代替候補 (dBIC<10):")
             for row in runners:
-                print(f"  dBIC={row['dBIC']:>5.1f}  {row['Components']}")
+                print(f"  dBIC={row['dBIC']:>5.1f}  {row['Components']} "
+                      f"[{row['Background']}]")
 
         save_outputs(best, sel.summary(), args.out, path.stem)
         print(f"出力: {args.out / (path.stem + '_peaks.csv')} ほか")

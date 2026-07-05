@@ -85,8 +85,11 @@ with st.sidebar:
 
     st.header("3. モデル")
     mode = st.radio("モード", ["物理拘束（ラインDB）", "無拘束（汎用擬Voigt）"])
-    background = st.selectbox("背景", ["tougaard", "shirley", "linear"],
-                              help="金属基板上の急峻な背景にはTougaard推奨")
+    background = st.selectbox(
+        "背景", ["auto", "tougaard", "shirley", "linear"],
+        help="auto: shirley/tougaardの両方をBICで比較して自動選択。"
+             "金属基板上の急峻な背景にはTougaardが選ばれやすい",
+    )
 
     pool: list[Component] = []
     max_generic = 5

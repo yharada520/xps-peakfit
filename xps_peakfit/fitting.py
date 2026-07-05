@@ -280,15 +280,23 @@ def fit_components(
     n_starts: int = 8,
     seed: int = 42,
     noise: str = "auto",
+    agree_rtol: float = 1e-3,
+    min_agree: int = 2,
 ) -> FitResult:
-    """MAP推定によるマルチスタートフィット.
+    """MAP推定による適応マルチスタートフィット.
+
+    物理拘束モードでは最適化地形がほぼ単峰のため、独立スタートのうち
+    min_agree 回が最良コストに一致（相対差 agree_rtol 以内）した時点で
+    早期終了する。n_starts は上限として機能する。
 
     Args:
         spec: フィット対象スペクトル（範囲切り出し済みであること）
         components: フィット成分のリスト
         background: "shirley" / "tougaard" / "linear"
-        n_starts: マルチスタート回数（1回目はジッターなし）
+        n_starts: マルチスタート最大回数（1回目はジッターなし）
         noise: "auto"（2階差分でスケール校正）/ "poisson"（σ=√y）
+        agree_rtol: 解一致とみなすコストの相対許容差
+        min_agree: 早期終了に必要な一致スタート数
     """
     if background not in BACKGROUNDS:
         raise ValueError(f"background は {BACKGROUNDS} のいずれか: {background}")
@@ -301,6 +309,7 @@ def fit_components(
 
     rng = np.random.default_rng(seed)
     best: lmfit.minimizer.MinimizerResult | None = None
+    costs: list[float] = []
     for i in range(max(n_starts, 1)):
         params = _build_params(
             x, y, components, background,
@@ -314,8 +323,18 @@ def fit_components(
         except Exception:
             logger.debug("start %d failed", i, exc_info=True)
             continue
+        costs.append(float(res.chisqr))
         if best is None or res.chisqr < best.chisqr:
             best = res
+        # 早期終了判定: 最良コストに一致するスタートが min_agree 回
+        best_cost = float(best.chisqr)
+        n_agree = sum(
+            1 for c in costs
+            if (c - best_cost) <= agree_rtol * max(abs(best_cost), 1e-12)
+        )
+        if n_agree >= min_agree:
+            logger.debug("early stop at start %d (%d agree)", i + 1, n_agree)
+            break
 
     if best is None:
         raise RuntimeError("全マルチスタートでフィットが収束しませんでした")

@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from itertools import combinations
 
@@ -32,6 +33,7 @@ class SelectionResult:
         for r in self.results:
             rows.append({
                 "Components": " + ".join(c.name for c in r.components),
+                "Background": r.background_kind,
                 "N_components": len(r.components),
                 "N_free_params": r.nfree,
                 "Chi2_reduced": round(r.reduced_chi2, 3),
@@ -78,22 +80,35 @@ def subset_candidates(
 def select_model(
     spec: Spectrum,
     candidates: list[list[Component]],
-    background: str = "shirley",
+    background: str | Sequence[str] = "auto",
     n_starts: int = 8,
     seed: int = 42,
 ) -> SelectionResult:
-    """候補構成を総当たりフィットし、BIC最小を選択."""
+    """候補構成×背景を総当たりフィットし、BIC最小を選択.
+
+    background="auto" で shirley/tougaard の両方を候補に含め、
+    背景モデルの選択もBICに委ねる（成分構成と同時に自動決定）。
+    """
+    if background == "auto":
+        backgrounds: tuple[str, ...] = ("shirley", "tougaard")
+    elif isinstance(background, str):
+        backgrounds = (background,)
+    else:
+        backgrounds = tuple(background)
+
     results: list[FitResult] = []
     for comps in candidates:
         label = " + ".join(c.name for c in comps)
-        try:
-            res = fit_components(
-                spec, comps, background=background, n_starts=n_starts, seed=seed
-            )
-            results.append(res)
-            logger.info("candidate [%s]: BIC=%.1f chi2r=%.3f", label, res.bic, res.reduced_chi2)
-        except Exception:
-            logger.exception("candidate [%s] のフィットに失敗", label)
+        for bg in backgrounds:
+            try:
+                res = fit_components(
+                    spec, comps, background=bg, n_starts=n_starts, seed=seed
+                )
+                results.append(res)
+                logger.info("candidate [%s|%s]: BIC=%.1f chi2r=%.3f",
+                            label, bg, res.bic, res.reduced_chi2)
+            except Exception:
+                logger.exception("candidate [%s|%s] のフィットに失敗", label, bg)
     if not results:
         raise RuntimeError("全候補のフィットに失敗しました")
     results.sort(key=lambda r: r.bic)
