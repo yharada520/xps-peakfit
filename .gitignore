@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+*.egg-info/
+build/
+dist/
+outputs/
+.pytest_cache/
+.venv/
+.claude/launch.json
+legacy/xps_flask/xps_flask/
+legacy/xps_flask/uploads/
+legacy/xps_flask/output/
+legacy/xps_flask/outputs/

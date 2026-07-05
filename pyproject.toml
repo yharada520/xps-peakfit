@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "xps-peakfit"
+version = "0.1.0"
+description = "Automated XPS peak fitting: BIC model selection + MAP pseudo-Voigt fitting with active Shirley/Tougaard backgrounds and physics-constrained spin-orbit doublets"
+readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "Tohoku Yossy" }]
+requires-python = ">=3.10"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Physics",
+    "Topic :: Scientific/Engineering :: Chemistry",
+]
+dependencies = [
+    "numpy>=1.24",
+    "scipy>=1.10",
+    "pandas>=2.0",
+    "lmfit>=1.2",
+    "matplotlib>=3.7",
+]
+
+[project.optional-dependencies]
+gui = ["streamlit>=1.30"]
+dev = ["pytest>=7.4"]
+
+[project.scripts]
+xps-peakfit = "xps_peakfit.cli:main"
+
+[project.urls]
+Repository = "https://github.com/yharada520/xps-peakfit"
+
+[tool.setuptools]
+packages = ["xps_peakfit"]
+
+[tool.pytest.ini_options]
+markers = ["slow: real-data benchmark tests"]

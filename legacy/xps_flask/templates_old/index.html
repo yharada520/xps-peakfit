@@ -1,0 +1,31 @@
+
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <title>XPS Si2p Peak Fitting (Flask v3.2)</title>
+  <style>
+    body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Hiragino Kaku Gothic ProN", Meiryo, sans-serif; margin: 40px; }
+    .card { max-width: 900px; margin: auto; padding: 24px; border: 1px solid #e5e7eb; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.04); }
+    .btn { display: inline-block; padding: 10px 16px; border-radius: 8px; border: 1px solid #d1d5db; background: #f9fafb; cursor: pointer; }
+    .btn:hover { background: #f3f4f6; }
+    .hint { color: #6b7280; font-size: 0.9rem; }
+    .flash { color: #b91c1c; margin-top: 8px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>XPS Si2p Peak Fitting（Flask v3.4）</h1>
+    <p class="hint">CSVは <b>energy,int</b> 列。範囲=96.5–105 eV。背景=適応Shirley。3ガウス（Auゴースト/SiO/SiO<sub>2</sub>）。</p>
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+      <div class="flash">{{ messages[0] }}</div>
+      {% endif %}
+    {% endwith %}
+    <form action="/fit" method="post" enctype="multipart/form-data">
+      <input class="btn" type="file" name="file" accept=".csv" required>
+      <button class="btn" type="submit">解析する</button>
+    </form>
+  </div>
+</body>
+</html>
