@@ -12,7 +12,13 @@ Designed for hard cases such as weak chemical-state shoulders sitting on steep m
 - **MAP estimation**: literature chemical-shift positions act as Gaussian priors on peak centers; the prior penalty is included in model comparison so physically implausible solutions are ranked down
 - **BIC model selection**: candidate component sets (subsets of the physical pool, or 1..N unconstrained peaks) are fitted exhaustively; near-ties (ΔBIC < 10) are reported honestly instead of silently picking one
 - **Noise-calibrated weighting**: Poisson weights with a robust scale factor estimated from second differences, so BIC stays meaningful for averaged/scaled data
-- **Multi-start optimization** (jittered initial values) on top of `lmfit`
+- **Adaptive multi-start optimization** (early stop on solution agreement, ~5x speedup) on top of `lmfit`
+- **Background selection by BIC** (`background="auto"`): Shirley vs Tougaard is decided by the data, not the user
+- **Model posterior probabilities**: BIC weights are reported as approximate posterior probabilities per candidate and per component count (e.g. "n=3: 60%, n=2: 40%")
+- **Spin-orbit fine-tuning** (`vary_so=True`): splitting width and branching ratio can vary under tight Gaussian priors (±0.02 eV / ±0.02) to absorb instrument-level deviations
+- **Doniach-Šunjić line shape** for asymmetric metal peaks (in addition to pseudo-Voigt)
+- **EM-based initial guesses**: spectrum-adapted expectation-maximization seeds the unconstrained mode
+- **Bayesian uncertainty quantification** (opt-in, `emcee`): 68% credible intervals for centers, widths, and areas from MCMC over the exact MAP posterior — seconds, not hours
 - **Automatic fit-range detection** (peak-prominence based, user-adjustable)
 - Streamlit GUI + batch CLI
 

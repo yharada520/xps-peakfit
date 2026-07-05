@@ -56,3 +56,26 @@ def doublet_pseudo_voigt(
 def doublet_area(amp: float, fwhm: float, eta: float, branch_ratio: float) -> float:
     """ダブレット合計面積（主+副）."""
     return pv_area(amp, fwhm, eta) * (1.0 + max(branch_ratio, 0.0))
+
+
+def doniach_sunjic(
+    x: np.ndarray, amp: float, cen: float, fwhm: float, asym: float
+) -> np.ndarray:
+    """Doniach-Šunjićラインシェイプ（高さ振幅定義、金属ピークの非対称裾）.
+
+    asym=0 でローレンツ関数（HWHM=fwhm/2）に厳密に一致する。
+    asym>0 で高束縛エネルギー側（エネルギー損失側）に裾が伸びる。
+    注意: asym>0 では無限区間の面積が発散するため、面積は解析窓内の
+    数値積分（numeric_area）で定義する。
+    """
+    gamma = 0.5 * fwhm
+    u = (cen - x) / gamma  # 高束縛エネルギー側に裾を出す符号
+    num = np.cos(0.5 * np.pi * asym + (1.0 - asym) * np.arctan(u))
+    den = (1.0 + u * u) ** (0.5 * (1.0 - asym))
+    peak = np.cos(0.5 * np.pi * asym)  # x=cen での値
+    return amp * (num / den) / peak
+
+
+def numeric_area(x: np.ndarray, curve: np.ndarray) -> float:
+    """解析窓内の数値積分面積（Doniach-Šunjić等の発散形状用）."""
+    return float(np.trapezoid(curve, x))

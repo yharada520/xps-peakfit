@@ -94,8 +94,18 @@ with st.sidebar:
     pool: list[Component] = []
     max_generic = 5
     fwhm_b = st.slider("FWHM範囲 (eV)", 0.4, 4.0, (1.2, 2.4), 0.1)
-    eta_max = st.slider("η上限（ローレンツ混合比）", 0.0, 1.0, 0.6, 0.05)
-    kw = dict(fwhm_bounds=fwhm_b, eta_bounds=(0.0, eta_max))
+    shape = st.selectbox(
+        "ピーク形状", ["pvoigt", "doniach"],
+        help="doniach: 金属ピーク向け非対称Doniach-Šunjić。η枠が非対称度(推奨上限0.3)になる",
+    )
+    eta_label = "η上限（ローレンツ混合比）" if shape == "pvoigt" else "非対称度上限"
+    eta_max = st.slider(eta_label, 0.0, 1.0, 0.6 if shape == "pvoigt" else 0.25, 0.05)
+    vary_so = st.checkbox(
+        "スピン軌道定数の微変動を許可（タイト事前分布）", value=False,
+        help="分裂幅±0.02 eV・分岐比±0.02のガウス事前分布付きで微調整（篠塚2024方式）",
+    )
+    kw = dict(fwhm_bounds=fwhm_b, eta_bounds=(0.0, eta_max),
+              shape=shape, vary_so=vary_so)
 
     if mode.startswith("物理"):
         keys = st.multiselect("ライン", sorted(LINE_REGISTRY),
@@ -171,6 +181,9 @@ if "sel" in st.session_state:
         st.metric("χ²_reduced", f"{best.reduced_chi2:.3f}")
 
         st.subheader("BIC比較（モデル選択）")
+        nprobs = sel.n_component_probabilities()
+        st.write("成分数の近似事後確率: "
+                 + ", ".join(f"**n={n}**: {p:.1%}" for n, p in nprobs.items()))
         bic_df = pd.DataFrame(sel.summary())
         st.dataframe(bic_df, use_container_width=True)
         n_alt = (bic_df["dBIC"] < 10).sum() - 1
@@ -184,3 +197,13 @@ if "sel" in st.session_state:
         st.download_button("BIC比較CSVをダウンロード",
                            bic_df.to_csv(index=False).encode(),
                            file_name=f"{spec.name}_bic.csv")
+
+        with st.expander("ベイズ不確かさ定量化（emcee, 数十秒）"):
+            steps = st.number_input("MCMCステップ数", 500, 10000, 1500, 500)
+            if st.button("MCMC実行"):
+                from xps_peakfit.uncertainty import bayesian_uncertainty
+                with st.spinner("emceeサンプリング中..."):
+                    br = bayesian_uncertainty(best, steps=int(steps))
+                st.caption(f"受容率 {br.acceptance_fraction:.2f} / "
+                           f"サンプル数 {br.n_samples}")
+                st.dataframe(pd.DataFrame(br.table), use_container_width=True)

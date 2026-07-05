@@ -58,8 +58,11 @@ def build_pool(
     ghosts: list[Component],
     fwhm_bounds: tuple[float, float],
     eta_max: float,
+    shape: str = "pvoigt",
+    vary_so: bool = False,
 ) -> list[Component]:
-    kw = dict(fwhm_bounds=fwhm_bounds, eta_bounds=(0.0, eta_max))
+    kw = dict(fwhm_bounds=fwhm_bounds, eta_bounds=(0.0, eta_max),
+              shape=shape, vary_so=vary_so)
     pool: list[Component] = []
     for key in line_keys:
         line = get_line(key)
@@ -128,6 +131,13 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--n-starts", type=int, default=8, help="マルチスタート回数")
     ap.add_argument("--min-components", type=int, default=1,
                     help="候補構成の最小成分数")
+    ap.add_argument("--shape", default="pvoigt", choices=("pvoigt", "doniach"),
+                    help="ピーク形状（doniach: 金属向け非対称DS。η枠が非対称度になる）")
+    ap.add_argument("--vary-so", action="store_true",
+                    help="スピン軌道分裂幅・分岐比をタイト事前分布付きで微変動許可")
+    ap.add_argument("--bayes", action="store_true",
+                    help="ベストモデルにemcee MCMCを実行し信頼区間を推定")
+    ap.add_argument("--bayes-steps", type=int, default=1500)
     ap.add_argument("--out", type=Path, default=Path("outputs"), help="出力先")
     ap.add_argument("-v", "--verbose", action="store_true")
     args = ap.parse_args(argv)
@@ -155,7 +165,8 @@ def main(argv: list[str] | None = None) -> int:
             candidates = generic_candidates(sub, max_peaks=args.generic,
                                             fwhm_bounds=tuple(args.fwhm))
         else:
-            pool = build_pool(args.line, args.ghost, tuple(args.fwhm), args.eta_max)
+            pool = build_pool(args.line, args.ghost, tuple(args.fwhm),
+                              args.eta_max, shape=args.shape, vary_so=args.vary_so)
             candidates = subset_candidates(pool, min_size=args.min_components)
 
         sel = select_model(sub, candidates, background=args.background,
@@ -169,12 +180,26 @@ def main(argv: list[str] | None = None) -> int:
         for r in best.peak_table():
             print(f"  {r['Component']:<16} cen={r['Center_eV']:>8.3f} eV  "
                   f"FWHM={r['FWHM_eV']:>5.2f}  area%={r['Area_pct']:>6.2f}")
+        nprobs = sel.n_component_probabilities()
+        print("成分数の近似事後確率: "
+              + ", ".join(f"n={n}: {p:.1%}" for n, p in nprobs.items()))
         runners = [row for row in sel.summary()[1:] if row["dBIC"] < 10.0]
         if runners:
             print("有力な代替候補 (dBIC<10):")
             for row in runners:
-                print(f"  dBIC={row['dBIC']:>5.1f}  {row['Components']} "
-                      f"[{row['Background']}]")
+                print(f"  dBIC={row['dBIC']:>5.1f} P={row['P_model']:.1%}  "
+                      f"{row['Components']} [{row['Background']}]")
+
+        if args.bayes:
+            from xps_peakfit.uncertainty import bayesian_uncertainty
+            print("emcee MCMC実行中...")
+            br = bayesian_uncertainty(best, steps=args.bayes_steps)
+            print(f"信頼区間 (68%, 受容率={br.acceptance_fraction:.2f}, "
+                  f"サンプル={br.n_samples}):")
+            for row in br.table:
+                print(f"  {row['Component']:<16} "
+                      f"cen={row['Center_eV']:.3f}±{row['Center_err']:.3f} eV  "
+                      f"FWHM={row['FWHM_eV']:.2f}±{row['FWHM_err']:.2f}")
 
         save_outputs(best, sel.summary(), args.out, path.stem)
         print(f"出力: {args.out / (path.stem + '_peaks.csv')} ほか")

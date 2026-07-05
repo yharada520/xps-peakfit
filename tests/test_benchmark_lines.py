@@ -39,6 +39,21 @@ def test_c1s_cc_dominant() -> None:
 
 
 @pytest.mark.slow
+def test_ni2p_four_state_decomposition() -> None:
+    """Ni2p: 金属+NiO+Ni(OH)2+サテライトの4成分がBIC選択されること."""
+    spec = load_spectrum(DATA / "XPS_Ni2p.csv").crop(846.0, 866.0)
+    pool = [Component.from_line("Ni2p", s, fwhm_bounds=(0.8, 3.5))
+            for s in ("Ni0", "NiO", "Ni(OH)2", "Ni0_sat")]
+    sel = select_model(spec, subset_candidates(pool, min_size=1),
+                       background="auto")
+    table = {r["Component"]: r for r in sel.best.peak_table()}
+    assert len(table) == 4
+    assert table["Ni2p_Ni0"]["Center_eV"] == pytest.approx(852.2, abs=0.4)
+    assert table["Ni2p_Ni0"]["Area_pct"] > 50.0
+    assert sel.best.reduced_chi2 < 1.3
+
+
+@pytest.mark.slow
 def test_cr2p_shifted_doublet_free_center() -> None:
     """Cr2p: 装置系で約-20 eVシフトしたデータを「位置フリーのダブレット」
     （ゴースト機構）でフィットし、2p3/2と2p1/2 (Δ9.3 eV) を同時再現."""

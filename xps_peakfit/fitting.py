@@ -17,7 +17,14 @@ import numpy as np
 from xps_peakfit.background import shirley_from_peaks, tougaard_from_peaks
 from xps_peakfit.io import Spectrum
 from xps_peakfit.lines import LineShape, get_line
-from xps_peakfit.models import doublet_area, doublet_pseudo_voigt
+from xps_peakfit.models import (
+    doniach_sunjic,
+    doublet_area,
+    numeric_area,
+    pseudo_voigt,
+)
+
+PEAK_SHAPES = ("pvoigt", "doniach")
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +51,14 @@ class Component:
     # 装置分解能・寿命幅がほぼ共通、というXPSの標準拘束）
     fwhm_group: str | None = None
     eta_group: str | None = None
+    # ピーク形状: "pvoigt"（ηは混合比）/ "doniach"（ηは非対称パラメータ。
+    # 上限は0.3程度を推奨）
+    shape: str = "pvoigt"
+    # スピン軌道定数の微変動許可（篠塚2024方式のタイト事前分布）。
+    # False なら so_split/branch_ratio を厳密固定
+    vary_so: bool = False
+    so_split_sigma: float = 0.02
+    branch_ratio_sigma: float = 0.02
 
     @classmethod
     def from_line(
@@ -127,7 +142,10 @@ class FitResult:
         return self.chi2 / max(self.ndata - self.nfree, 1)
 
     def peak_table(self) -> list[dict]:
-        """成分ごとの中心・FWHM・高さ・面積（ダブレットは合計面積）."""
+        """成分ごとの中心・FWHM・高さ・面積（ダブレットは合計面積）.
+
+        Doniach-Šunjić形状は無限区間で面積が発散するため、窓内数値積分。
+        """
         rows: list[dict] = []
         for comp in self.components:
             p = self.params
@@ -135,19 +153,41 @@ class FitResult:
             cen = p[f"{comp.pname}_cen"].value
             fwhm = p[comp.fwhm_pname].value
             eta = p[comp.eta_pname].value
+            so, br = _so_values(p, comp)
+            if comp.shape == "doniach":
+                area = numeric_area(self.spectrum.energy, self.curves[comp.name])
+            else:
+                area = doublet_area(amp, fwhm, eta, br)
             rows.append({
                 "Component": comp.name,
+                "Shape": comp.shape,
                 "Center_eV": round(cen, 3),
                 "FWHM_eV": round(fwhm, 3),
                 "Eta": round(eta, 3),
                 "Height": round(amp, 1),
-                "Area": round(doublet_area(amp, fwhm, eta, comp.branch_ratio), 1),
-                "Doublet": comp.branch_ratio > 0,
+                "Area": round(area, 1),
+                "Doublet": br > 0,
+                "SO_split_eV": round(so, 3) if br > 0 else None,
+                "Branch_ratio": round(br, 3) if br > 0 else None,
             })
         total = sum(r["Area"] for r in rows)
         for r in rows:
             r["Area_pct"] = round(100.0 * r["Area"] / total, 2) if total > 0 else 0.0
         return rows
+
+
+def _base_shape(shape: str):
+    if shape == "doniach":
+        return doniach_sunjic
+    return pseudo_voigt
+
+
+def _so_values(params: lmfit.Parameters, comp: Component) -> tuple[float, float]:
+    """スピン軌道定数（vary_so時はパラメータ値、それ以外はDB定数）."""
+    p = comp.pname
+    so = params[f"{p}_so"].value if f"{p}_so" in params else comp.so_split
+    br = params[f"{p}_br"].value if f"{p}_br" in params else comp.branch_ratio
+    return so, br
 
 
 def _eval_peaks(
@@ -157,15 +197,15 @@ def _eval_peaks(
     curves: dict[str, np.ndarray] = {}
     for comp in components:
         p = comp.pname
-        c = doublet_pseudo_voigt(
-            x,
-            params[f"{p}_amp"].value,
-            params[f"{p}_cen"].value,
-            params[comp.fwhm_pname].value,
-            params[comp.eta_pname].value,
-            comp.so_split,
-            comp.branch_ratio,
-        )
+        fn = _base_shape(comp.shape)
+        amp = params[f"{p}_amp"].value
+        cen = params[f"{p}_cen"].value
+        fwhm = params[comp.fwhm_pname].value
+        eta = params[comp.eta_pname].value
+        c = fn(x, amp, cen, fwhm, eta)
+        so, br = _so_values(params, comp)
+        if br > 0.0:
+            c = c + fn(x, amp * br, cen + so, fwhm, eta)
         curves[comp.name] = c
         total += c
     return total, curves
@@ -193,12 +233,17 @@ def _residual(
     peak_sum, _ = _eval_peaks(params, x, components)
     model = _eval_background(params, x, peak_sum, bg_kind) + peak_sum
     r = (model - y) * w
-    # MAP: 中心位置の事前分布ペナルティ
-    priors = [
-        (params[f"{c.pname}_cen"].value - c.center) / c.center_sigma
-        for c in components
-        if np.isfinite(c.center_sigma)
-    ]
+    # MAP: 事前分布ペナルティ（中心位置＋vary_so時のスピン軌道定数）
+    priors: list[float] = []
+    for c in components:
+        if np.isfinite(c.center_sigma):
+            priors.append(
+                (params[f"{c.pname}_cen"].value - c.center) / c.center_sigma
+            )
+        if c.vary_so and c.branch_ratio > 0.0:
+            so, br = _so_values(params, c)
+            priors.append((so - c.so_split) / c.so_split_sigma)
+            priors.append((br - c.branch_ratio) / c.branch_ratio_sigma)
     if priors:
         return np.concatenate([r, np.asarray(priors)])
     return r
@@ -256,6 +301,14 @@ def _build_params(
             vary_eta = comp.eta_bounds[1] - comp.eta_bounds[0] > 1e-9
             params.add(comp.eta_pname, value=eta0,
                        min=comp.eta_bounds[0], max=comp.eta_bounds[1], vary=vary_eta)
+        # スピン軌道定数の微変動（タイト事前分布、境界は±4σ）
+        if comp.vary_so and comp.branch_ratio > 0.0:
+            params.add(f"{p}_so", value=comp.so_split,
+                       min=comp.so_split - 4.0 * comp.so_split_sigma,
+                       max=comp.so_split + 4.0 * comp.so_split_sigma)
+            params.add(f"{p}_br", value=comp.branch_ratio,
+                       min=max(comp.branch_ratio - 4.0 * comp.branch_ratio_sigma, 0.0),
+                       max=comp.branch_ratio + 4.0 * comp.branch_ratio_sigma)
     return params
 
 
@@ -344,10 +397,16 @@ def fit_components(
     bg = _eval_background(best.params, x, peak_sum, background)
     model = bg + peak_sum
     chi2 = float(np.sum(((model - y) * w) ** 2))
-    prior_penalty = float(sum(
-        ((best.params[f"{c.pname}_cen"].value - c.center) / c.center_sigma) ** 2
-        for c in components if np.isfinite(c.center_sigma)
-    ))
+    prior_penalty = 0.0
+    for c in components:
+        if np.isfinite(c.center_sigma):
+            prior_penalty += (
+                (best.params[f"{c.pname}_cen"].value - c.center) / c.center_sigma
+            ) ** 2
+        if c.vary_so and c.branch_ratio > 0.0:
+            so, br = _so_values(best.params, c)
+            prior_penalty += ((so - c.so_split) / c.so_split_sigma) ** 2
+            prior_penalty += ((br - c.branch_ratio) / c.branch_ratio_sigma) ** 2
     nfree = sum(1 for p in best.params.values() if p.vary)
 
     return FitResult(
