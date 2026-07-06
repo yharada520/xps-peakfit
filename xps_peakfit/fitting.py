@@ -97,13 +97,16 @@ class Component:
     @property
     def fwhm_pname(self) -> str:
         if self.fwhm_group:
-            return f"grp_{re.sub(r'\\W', '_', self.fwhm_group)}_fwhm"
+            # f-string式内のバックスラッシュはPython 3.11以前で構文エラーのため外出し
+            group = re.sub(r"\W", "_", self.fwhm_group)
+            return f"grp_{group}_fwhm"
         return f"{self.pname}_fwhm"
 
     @property
     def eta_pname(self) -> str:
         if self.eta_group:
-            return f"grp_{re.sub(r'\\W', '_', self.eta_group)}_eta"
+            group = re.sub(r"\W", "_", self.eta_group)
+            return f"grp_{group}_eta"
         return f"{self.pname}_eta"
 
 
