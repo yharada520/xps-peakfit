@@ -33,7 +33,7 @@ pip install -e .[gui,bayes,dev]
 
 ```bash
 # Physics-constrained mode: all Si2p chemical states + an Au4f-shaped ghost near 99.8 eV
-xps-peakfit data/XPS_Si2p_siloxane_NG.csv \
+xps-peakfit data/XPS_Si2p_siloxane_synthetic.csv \
     --window 98 104.5 --background auto \
     --line Si2p --ghost Au4f@99.8:0.5 --min-components 2
 
@@ -56,7 +56,7 @@ from xps_peakfit import load_spectrum, select_model
 from xps_peakfit.fitting import Component
 from xps_peakfit.model_select import subset_candidates
 
-spec = load_spectrum("data/XPS_Si2p_siloxane_NG.csv").crop(98.0, 104.5)
+spec = load_spectrum("data/XPS_Si2p_siloxane_synthetic.csv").crop(98.0, 104.5)
 pool = [
     Component.from_line("Au4f", "Au0", name="Au4f_ghost", center=99.8, center_sigma=0.5),
     Component.from_line("Si2p", "Si0"),

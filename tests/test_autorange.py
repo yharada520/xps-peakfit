@@ -32,9 +32,10 @@ def test_auto_range_flat_noise_returns_full() -> None:
     assert emin == x[0] and emax == x[-1]
 
 
-def test_auto_range_ng_data_covers_si2p() -> None:
-    """NGデータで、窓がSi2p領域 (99–103) を覆うこと."""
-    spec = load_spectrum("data/XPS_Si2p_siloxane_NG.csv")
+def test_auto_range_real_data_covers_peak() -> None:
+    """実データ（SiO2主体Si2p, 主ピーク≈103.8 eV）で窓がピークを覆い、
+    かつ全範囲(90–110)より狭く絞られること."""
+    spec = load_spectrum("data/XPS_Si2p.csv")
     emin, emax = auto_range(spec)
-    assert emin <= 99.0
-    assert emax >= 103.0
+    assert emin <= 102.0 and emax >= 105.0
+    assert emin > 90.0 and emax < 110.0

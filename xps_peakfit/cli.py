@@ -2,7 +2,7 @@
 
 使用例:
     # 物理拘束モード（Si2p全状態 + Auゴースト）
-    python -m xps_peakfit.cli data/XPS_Si2p_siloxane_NG.csv \\
+    python -m xps_peakfit.cli data/XPS_Si2p_siloxane_synthetic.csv \\
         --window 98 104.5 --background tougaard \\
         --line Si2p --ghost Au4f@99.8:0.5
 
