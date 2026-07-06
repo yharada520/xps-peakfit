@@ -1,4 +1,13 @@
-# EMPeaks direct benchmark (2026-07-06)
+# EMPeaks reference comparison (2026-07-06)
+
+**Purpose.** This is a *reference characterization*, not a contest. EMPeaks was
+chosen as the comparison point simply because it is a valuable, pip-installable
+public implementation of automated spectral fitting. EMPeaks and xps-peakfit
+target different jobs: EMPeaks is built for high-throughput, prior-free
+peak-shift tracking across large spectrum series, while xps-peakfit targets
+physics-constrained decomposition of hard *single* spectra. The results below
+characterize how each design behaves outside/inside its intended regime — they
+should not be read as a ranking of the tools overall.
 
 Environment: Windows 11, Python 3.12, EMPeaks 2.1.0 (PyPI, BSD-3) with scipy≥1.14
 compat shims (`integrate.trapz/simps`). Script: `benchmarks/benchmark_empeaks.py`.
@@ -45,7 +54,9 @@ seed parameter). xps_peakfit v0.2.0 ran its standard physics-constrained mode.
    (Au4f centers; Ni2p centers) — consistent with its design target of
    high-throughput peak-shift mapping over spectrum series.
 
-Caveat for the paper: this is EMPeaks outside its primary use case; a balanced
-comparison should also include a peak-shift-tracking task over a spectrum
-series (EMPeaks' home turf) and note that K was supplied to EMPeaks manually
-while xps_peakfit selects it via BIC.
+Caveat for any publication use: this is EMPeaks outside its primary use case; a
+balanced comparison should also include a peak-shift-tracking task over a
+spectrum series (EMPeaks' home turf) and note that K was supplied to EMPeaks
+manually while xps_peakfit selects it via BIC. The robustness observations in
+finding 2 concern implementation details of one released version (2.1.0) and
+say nothing about the validity of the spectrum-adapted EM method itself.
