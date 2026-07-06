@@ -157,9 +157,16 @@ def main(out_dir: Path) -> None:
           for s in ("Si0", "SiOx", "SiO2")], "shirley"),
     ]
 
+    # 実測定NGデータは非配布。存在しない環境では合成等価データで代替
+    fallback = {"XPS_Si2p_siloxane_NG.csv": "XPS_Si2p_siloxane_synthetic.csv"}
+
     rows = []
     for tag, fname, window, k_emp, comps, bg in cases:
-        spec = load_spectrum(REPO / "data" / fname).crop(*window)
+        path = REPO / "data" / fname
+        if not path.exists() and fname in fallback:
+            path = REPO / "data" / fallback[fname]
+            print(f"[{tag}] 実データ非配布のため合成等価データを使用: {path.name}")
+        spec = load_spectrum(path).crop(*window)
         try:
             emp = run_empeaks(spec, k_emp)
         except Exception as e:

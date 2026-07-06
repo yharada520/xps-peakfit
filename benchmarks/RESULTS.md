@@ -12,6 +12,13 @@ should not be read as a ranking of the tools overall.
 Environment: Windows 11, Python 3.12, EMPeaks 2.1.0 (PyPI, BSD-3) with scipy≥1.14
 compat shims (`integrate.trapz/simps`). Script: `benchmarks/benchmark_empeaks.py`.
 
+**Data note.** The Si2p_NG row below was measured on the original (proprietary,
+not distributed) spectrum. The repository ships a synthetic equivalent
+(`data/XPS_Si2p_siloxane_synthetic.csv`, generated from the published fit
+parameters with measurement-matched noise); the benchmark script automatically
+falls back to it when the original file is absent. The corresponding comparison
+figure is likewise not distributed.
+
 Conditions: identical data and energy windows; EMPeaks was **given the correct
 number of peaks K** (it has no model selection) and 8 random restarts (`trial=8`,
 matching our `n_starts` cap); pseudo-Voigt mixture with `linear` background

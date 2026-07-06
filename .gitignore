@@ -11,3 +11,6 @@ legacy/xps_flask/xps_flask/
 legacy/xps_flask/uploads/
 legacy/xps_flask/output/
 legacy/xps_flask/outputs/
+# 実測定データ（非配布・ローカルのみ）
+data/XPS_Si2p_siloxane_NG.csv
+benchmarks/figures/bench_Si2p_NG.png

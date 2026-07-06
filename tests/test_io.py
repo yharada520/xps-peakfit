@@ -31,7 +31,7 @@ def test_load_flexible_columns(tmp_path) -> None:
 
 
 def test_load_real_data() -> None:
-    s = load_spectrum("data/XPS_Si2p_siloxane_NG.csv")
-    assert len(s.energy) == 201
+    s = load_spectrum("data/XPS_Si2p.csv")  # BE/Int 列エイリアスの実データ確認
+    assert len(s.energy) == 401
     assert s.energy[0] == pytest.approx(90.0)
     assert s.energy[-1] == pytest.approx(110.0)

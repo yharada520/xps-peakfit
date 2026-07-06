@@ -70,7 +70,7 @@ print(sel.n_component_probabilities())    # approximate posterior per component 
 
 ## Benchmark: Si 2p on an Au ghost
 
-`data/XPS_Si2p_siloxane_NG.csv` is a deliberately hard spectrum: a thin siloxane layer on an Au electrode, where the Si 2p region overlaps an Au ghost line and the SiO2 shoulder is a subtle feature on a steep background. The physically correct decomposition (SiO2 at 102–103 eV, SiOx/siloxane near 101 eV, ghost/elemental Si near 99–100 eV) is selected automatically by BIC:
+Development was driven by a deliberately hard spectrum: a thin siloxane layer on an Au electrode, where the Si 2p region overlaps an Au ghost line and the SiO2 shoulder is a subtle feature on a steep background. The physically correct decomposition (SiO2 at 102–103 eV, SiOx/siloxane near 101 eV, ghost/elemental Si near 99–100 eV) is selected automatically by BIC:
 
 | Component | Center (eV) | Area % |
 |-----------|-------------|--------|
@@ -78,7 +78,7 @@ print(sel.n_component_probabilities())    # approximate posterior per component 
 | SiOx (siloxane) | 101.43 | 16.1 |
 | SiO2 | 102.73 | 13.9 |
 
-This case is locked in as a regression test (`tests/test_benchmark_ng.py`).
+The measured spectrum itself is proprietary and not distributed. Instead the repository ships a **synthetic equivalent**, `data/XPS_Si2p_siloxane_synthetic.csv`, generated from the fit model above with measurement-matched noise. It preserves the defining difficulty of the original — the SiO2 shoulder sits at the detection limit (component-count posterior n=3: 60% / n=2: 40%) — and is locked in as a regression test (`tests/test_benchmark_ng.py`).
 
 ## How this differs from other approaches
 

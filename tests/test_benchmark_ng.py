@@ -1,10 +1,16 @@
-"""実データベンチマーク: Au電極上シロキサンのSi2p（最難関データ）.
+"""難ケースベンチマーク: Au電極上シロキサンのSi2p.
 
 正解（ドメイン知識）:
 - 99–103 eV に3〜4本
 - 最高束縛エネルギー側 (102–103 eV) が SiO2
 - ~101 eV が SiOx（シロキサン）
 - それ以外は Au ゴーストまたは元素状 Si2p
+
+実測定データ（XPS_Si2p_siloxane_NG.csv）は所有権の関係で配布しないため、
+リポジトリには「公開済みフィットモデル＋実測相当ノイズ(s=0.638)」から
+生成した合成等価データ（XPS_Si2p_siloxane_synthetic.csv, seed=3）を同梱する。
+SiO2ショルダーが検出限界近傍（P(n=3)≈0.6）である点も実測定を再現している。
+実データがローカルに存在する場合のみ、実データ回帰テストも実行される。
 """
 from pathlib import Path
 
@@ -15,6 +21,7 @@ from xps_peakfit.fitting import Component
 from xps_peakfit.model_select import subset_candidates
 
 DATA = Path(__file__).parent.parent / "data"
+REAL_NG = DATA / "XPS_Si2p_siloxane_NG.csv"
 
 FWHM_B = (1.2, 2.4)
 ETA_B = (0.0, 0.6)
@@ -31,24 +38,38 @@ def _pool() -> list[Component]:
     ]
 
 
-@pytest.mark.slow
-def test_ng_data_selects_physical_solution() -> None:
-    """NGデータ: Tougaard背景でSiOx/SiO2を含む3〜4成分解が選択されること."""
-    spec = load_spectrum(DATA / "XPS_Si2p_siloxane_NG.csv").crop(98.0, 104.5)
-    sel = select_model(spec, subset_candidates(_pool(), min_size=2),
-                       background="tougaard", n_starts=8)
+def _assert_physical_solution(sel) -> None:
     best = sel.best
     assert 3 <= len(best.components) <= 4
-
     table = {r["Component"]: r for r in best.peak_table()}
     assert "Si2p_SiO2" in table, f"SiO2成分が未選択: {list(table)}"
     assert "Si2p_SiOx" in table, f"SiOx成分が未選択: {list(table)}"
     assert 102.0 <= table["Si2p_SiO2"]["Center_eV"] <= 103.5
     assert 100.8 <= table["Si2p_SiOx"]["Center_eV"] <= 101.8
-    # 残りの主成分（ゴースト or Si0）は 99–100.5 eV
     others = [r for n, r in table.items() if n not in ("Si2p_SiO2", "Si2p_SiOx")]
     assert others and all(99.0 <= r["Center_eV"] <= 100.5 for r in others)
     assert best.reduced_chi2 < 1.5
+
+
+@pytest.mark.slow
+def test_ng_synthetic_selects_physical_solution() -> None:
+    """合成等価データ: 背景auto選択込みで3成分の物理解が選択されること."""
+    spec = load_spectrum(DATA / "XPS_Si2p_siloxane_synthetic.csv")
+    sel = select_model(spec, subset_candidates(_pool(), min_size=2),
+                       background="auto", n_starts=8)
+    _assert_physical_solution(sel)
+    assert sel.best.background_kind == "tougaard"
+
+
+@pytest.mark.slow
+@pytest.mark.skipif(not REAL_NG.exists(),
+                    reason="実測定データはローカル環境のみ（非配布）")
+def test_ng_real_data_selects_physical_solution() -> None:
+    """実測定データ（ローカル存在時のみ）: 同じ物理解が選択されること."""
+    spec = load_spectrum(REAL_NG).crop(98.0, 104.5)
+    sel = select_model(spec, subset_candidates(_pool(), min_size=2),
+                       background="tougaard", n_starts=8)
+    _assert_physical_solution(sel)
 
 
 @pytest.mark.slow
