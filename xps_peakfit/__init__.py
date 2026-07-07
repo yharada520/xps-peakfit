@@ -10,8 +10,9 @@ from xps_peakfit.lines import LINE_REGISTRY, LineShape, get_line
 from xps_peakfit.fitting import Component, FitResult, fit_components
 from xps_peakfit.model_select import SelectionResult, select_model
 from xps_peakfit.uncertainty import BayesResult, bayesian_uncertainty
+from xps_peakfit.series import SeriesResult, fit_series, select_series_model
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 
 __all__ = [
     "Spectrum", "load_spectrum",
@@ -20,5 +21,6 @@ __all__ = [
     "Component", "FitResult", "fit_components",
     "SelectionResult", "select_model",
     "BayesResult", "bayesian_uncertainty",
+    "SeriesResult", "fit_series", "select_series_model",
     "__version__",
 ]

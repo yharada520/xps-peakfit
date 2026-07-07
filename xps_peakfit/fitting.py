@@ -259,6 +259,7 @@ def _build_params(
     bg_kind: str,
     rng: np.random.Generator | None = None,
     jitter: float = 0.0,
+    init_centers: dict[str, float] | None = None,
 ) -> lmfit.Parameters:
     params = lmfit.Parameters()
     # 直線背景の初期値: 両端を結ぶ直線
@@ -274,7 +275,8 @@ def _build_params(
 
     for comp in components:
         p = comp.pname
-        cen0 = comp.center
+        # 系列モード等での初期値上書き（事前分布=comp.centerは変えない）
+        cen0 = (init_centers or {}).get(comp.name, comp.center)
         fwhm0 = 0.5 * (comp.fwhm_bounds[0] + comp.fwhm_bounds[1])
         if rng is not None and jitter > 0.0:
             span = min(comp.center_sigma, comp.center_window) if np.isfinite(comp.center_sigma) else comp.center_window
@@ -338,6 +340,7 @@ def fit_components(
     noise: str = "auto",
     agree_rtol: float = 1e-3,
     min_agree: int = 2,
+    init_centers: dict[str, float] | None = None,
 ) -> FitResult:
     """MAP推定による適応マルチスタートフィット.
 
@@ -370,6 +373,7 @@ def fit_components(
         params = _build_params(
             x, y, components, background,
             rng=rng if i > 0 else None, jitter=0.6 if i > 0 else 0.0,
+            init_centers=init_centers,
         )
         try:
             res = lmfit.minimize(
