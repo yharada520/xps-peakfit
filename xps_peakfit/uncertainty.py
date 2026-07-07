@@ -38,16 +38,22 @@ class BayesResult:
 
 
 def _finite_bounds(params: lmfit.Parameters, scale: float = 10.0) -> lmfit.Parameters:
-    """emcee用に無限境界を有限化（現在値の±scale倍を目安）."""
+    """emcee用に無限境界を有限化（現在値の±scale倍を目安）.
+
+    現在値が0近傍のパラメータ（例: 背景スケールが〜0に収束した場合）でも
+    min==max とならないよう、スパンに下限を設ける。
+    """
     p = params.copy()
     for par in p.values():
         if not par.vary:
             continue
-        v = abs(par.value) if par.value != 0 else 1.0
+        span = scale * max(abs(par.value), 1e-3)
         if not np.isfinite(par.min):
-            par.min = par.value - scale * v
+            par.min = par.value - span
         if not np.isfinite(par.max):
-            par.max = par.value + scale * v
+            par.max = par.value + span
+        if par.max - par.min < 1e-9:
+            par.max = par.min + max(abs(par.value), 1e-6)
     return p
 
 
