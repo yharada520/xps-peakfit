@@ -4,10 +4,15 @@
 各スペクトルを独立に「化学状態プール×背景」のBIC自動選択で分解し、
 成分面積の時間発展（酸化カイネティクス）を無人で抽出する。
 
-O1s化学状態プール（GaN酸化の文献値ベース）:
-- O_GaO : Ga-O結合（Ga2O3様）  ~530.6 eV
-- O_OH  : 水酸基/欠陥酸素      ~532.0 eV
-- O_H2O : 吸着水/有機          ~533.3 eV
+O1s化学状態プール（Sumiya et al., J. Phys. Chem. C 124 (2020) 25282 の
+帰属に準拠。DFMD計算による裏付けあり）:
+- O-O  : 分子性吸着酸素   ~530 eV
+- Ga-O : 解離性吸着(Ga-O) ~531 eV
+- N-O  : N-O結合          ~532 eV
+
+実験条件（同文献・原田ら先端計測シンポジウム2022 P2-9より）:
+O2/Heビーム照射（並進エネルギー2.26 eV, 200°C）中にO1sを逐次測定。
+hv=730 eV, パスエネルギー5.0 eV（分解能250 meV）。
 
 実行: python -X utf8 benchmarks/casestudy_gan_oxidation.py [出力ディレクトリ]
 """
@@ -38,9 +43,9 @@ def pool() -> list[Component]:
     kw = dict(fwhm_bounds=FWHM_B, eta_bounds=ETA_B, fwhm_group="O1s",
               eta_group="O1s")
     return [
-        Component(name="O_GaO", center=530.6, center_sigma=0.5, **kw),
-        Component(name="O_OH", center=532.0, center_sigma=0.6, **kw),
-        Component(name="O_H2O", center=533.3, center_sigma=0.6, **kw),
+        Component(name="O-O", center=530.0, center_sigma=0.5, **kw),
+        Component(name="Ga-O", center=531.0, center_sigma=0.5, **kw),
+        Component(name="N-O", center=532.2, center_sigma=0.6, **kw),
     ]
 
 
@@ -70,7 +75,7 @@ def main(out_dir: Path) -> None:
             chi2r=round(best.reduced_chi2, 3),
             P_n=";".join(f"{k}:{v:.2f}" for k, v in nprob.items()),
         )
-        for name in ("O_GaO", "O_OH", "O_H2O"):
+        for name in ("O-O", "Ga-O", "N-O"):
             r = table.get(name)
             row[f"{name}_cen"] = r["Center_eV"] if r else np.nan
             row[f"{name}_area"] = r["Area"] if r else 0.0
@@ -85,19 +90,19 @@ def main(out_dir: Path) -> None:
 
     # カイネティクス図
     fig, axes = plt.subplots(1, 2, figsize=(11.5, 4.4))
-    for name, mk in (("O_GaO", "o"), ("O_OH", "s"), ("O_H2O", "^")):
+    for name, mk in (("O-O", "o"), ("Ga-O", "s"), ("N-O", "^")):
         axes[0].plot(df["step"], df[f"{name}_area"], mk + "-", ms=5, label=name)
     axes[0].plot(df["step"],
-                 df[[f"{n}_area" for n in ("O_GaO", "O_OH", "O_H2O")]].sum(axis=1),
+                 df[[f"{n}_area" for n in ("O-O", "Ga-O", "N-O")]].sum(axis=1),
                  "k--", lw=1, label="total")
     axes[0].set_xlabel("Oxidation step (file index)")
     axes[0].set_ylabel("O1s component area (a.u.)")
     axes[0].set_title("GaN initial oxidation kinetics (auto-decomposed)")
     axes[0].legend(fontsize=8)
 
-    axes[1].plot(df["step"], df["O_GaO_cen"], "o-", ms=5, label="O_GaO center")
+    axes[1].plot(df["step"], df["Ga-O_cen"], "o-", ms=5, label="Ga-O center")
     axes[1].set_xlabel("Oxidation step (file index)")
-    axes[1].set_ylabel("O_GaO center (eV)")
+    axes[1].set_ylabel("Ga-O center (eV)")
     axes[1].set_title("Chemical shift evolution")
     axes[1].legend(fontsize=8)
     fig.tight_layout()
