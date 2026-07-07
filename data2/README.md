@@ -12,8 +12,9 @@ surface, measured at Spring-8 beamline BL23SU with photon energy
 - Region: KE 192–205 eV ⇔ BE 525–538 eV (O 1s), 0.1 eV steps.
 
 This dataset is openly available via the NIMS Materials Data Repository
-(MDR). <!-- TODO: add MDR DOI and measurement credit (measurer /
-beamline staff) before journal submission -->
+(MDR): **https://doi.org/10.48505/nims.3848**
+<!-- TODO: add measurement credit (measurer / beamline staff) before
+journal submission -->
 
 Analysis case study: `benchmarks/casestudy_gan_oxidation.py`
 (automatic chemical-state decomposition and oxidation kinetics extraction).
