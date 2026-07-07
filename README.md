@@ -80,6 +80,16 @@ print(sel.n_component_probabilities())    # 成分数ごとの近似事後確率
 
 実測定データは所有権の関係で配布していません。代わりに、上記のフィットモデルから実測相当ノイズで生成した**合成等価データ** `data/XPS_Si2p_siloxane_synthetic.csv` を同梱しています。SiO2ショルダーが検出限界近傍（成分数事後確率 n=3: 60% / n=2: 40%）という実測定の難しさもそのまま再現しており、回帰テスト（`tests/test_benchmark_ng.py`）として固定されています。
 
+## ケーススタディ: GaN初期酸化のオペランド追跡（Spring-8 BL23SU）
+
+`data2/` に同梱の公開データセット（c面GaN初期酸化のO 1s系列16本、hv=730 eV、NIMS MDR登録データ）を、化学状態プール（Ga-O / OH / H₂O）×背景のBIC自動選択で**全16本・約6秒・人手ゼロ**で分解できます:
+
+```bash
+python -X utf8 benchmarks/casestudy_gan_oxidation.py
+```
+
+Ga-O成分の急速飽和とOH成分の継続成長という酸化カイネティクス、およびGa-O中心の化学シフト発展が自動抽出されます（`benchmarks/figures/gan_kinetics.png`）。運動エネルギー軸のデータは `load_spectrum(path, hv=730.0)` / CLI `--hv 730` でBEに変換されます。
+
 ## 他手法との違い
 
 XPSスペクトルの自動解析には優れた先行研究があり、本パッケージはそれらから多くを学んでいます。**以下は優劣の比較ではなく、設計目標の違いの整理です**。用途によって適切なツールは異なります。

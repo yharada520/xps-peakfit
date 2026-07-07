@@ -80,6 +80,16 @@ Development was driven by a deliberately hard spectrum: a thin siloxane layer on
 
 The measured spectrum itself is proprietary and not distributed. Instead the repository ships a **synthetic equivalent**, `data/XPS_Si2p_siloxane_synthetic.csv`, generated from the fit model above with measurement-matched noise. It preserves the defining difficulty of the original — the SiO2 shoulder sits at the detection limit (component-count posterior n=3: 60% / n=2: 40%) — and is locked in as a regression test (`tests/test_benchmark_ng.py`).
 
+## Case study: operando tracking of GaN initial oxidation (Spring-8 BL23SU)
+
+The bundled open dataset in `data2/` (16 O 1s spectra following the initial oxidation of a c-plane GaN surface, hv = 730 eV, registered in the NIMS Materials Data Repository) is decomposed with a chemical-state pool (Ga-O / OH / H₂O) and BIC-selected backgrounds — **all 16 spectra in ~6 seconds, fully unattended**:
+
+```bash
+python -X utf8 benchmarks/casestudy_gan_oxidation.py
+```
+
+The oxidation kinetics — rapid saturation of the Ga-O component and continued growth of the OH component — and the chemical-shift evolution of the Ga-O center are extracted automatically (`benchmarks/figures/gan_kinetics.png`). Kinetic-energy-axis data are converted via `load_spectrum(path, hv=730.0)` / CLI `--hv 730`.
+
 ## How this differs from other approaches
 
 Excellent prior work exists on automated XPS analysis, and this package has learned a great deal from it. **The following is a comparison of design goals, not a ranking** — the right tool depends on the task.
