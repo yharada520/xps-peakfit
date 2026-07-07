@@ -113,6 +113,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("csv", nargs="+", help="入力CSV（energy/int列）")
     ap.add_argument("--window", nargs=2, type=float, metavar=("EMIN", "EMAX"),
                     help="フィット範囲 (eV)")
+    ap.add_argument("--hv", type=float, default=None,
+                    help="光子エネルギー (eV)。指定時は第1列をKEとみなしBE=hv-KEに変換")
     ap.add_argument("--auto-range", action="store_true",
                     help="フィット範囲を自動検出")
     ap.add_argument("--background", default="auto",
@@ -151,7 +153,7 @@ def main(argv: list[str] | None = None) -> int:
 
     for path_str in args.csv:
         path = Path(path_str)
-        spec = load_spectrum(path)
+        spec = load_spectrum(path, hv=args.hv)
         if args.window:
             window = (args.window[0], args.window[1])
         elif args.auto_range:

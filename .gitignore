@@ -14,3 +14,5 @@ legacy/xps_flask/outputs/
 # 実測定データ（非配布・ローカルのみ）
 data/XPS_Si2p_siloxane_NG.csv
 benchmarks/figures/bench_Si2p_NG.png
+# Spring-8 BL23SU GaN酸化系列（公開可否未確認のためローカルのみ）
+data2/

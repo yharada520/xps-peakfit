@@ -48,15 +48,40 @@ class Spectrum:
         return float(np.median(np.diff(self.energy)))
 
 
-def load_spectrum(path: str | Path) -> Spectrum:
-    """CSVからスペクトルを読み込む。列名は energy/int 系のエイリアスを柔軟判定."""
+def _is_headerless(path: Path) -> bool:
+    """先頭行が全て数値ならヘッダなしCSVと判定."""
+    with open(path, encoding="utf-8-sig") as f:
+        first = f.readline()
+    try:
+        [float(tok) for tok in first.replace("\t", ",").split(",") if tok.strip()]
+        return True
+    except ValueError:
+        return False
+
+
+def load_spectrum(path: str | Path, hv: float | None = None) -> Spectrum:
+    """CSVからスペクトルを読み込む。列名は energy/int 系のエイリアスを柔軟判定.
+
+    Args:
+        path: CSVパス。ヘッダ行がない（先頭行が数値のみの）ファイルにも対応
+        hv: 光子エネルギー (eV)。指定すると第1列を運動エネルギーとみなし
+            束縛エネルギー BE = hv - KE に変換する（シンクロトロン計測用）
+    """
     path = Path(path)
     try:
-        df = pd.read_csv(path)
+        if _is_headerless(path):
+            df = pd.read_csv(path, header=None, names=["energy", "int"],
+                             usecols=[0, 1])
+        else:
+            df = pd.read_csv(path)
     except Exception:
         logger.exception("CSV読み込みに失敗: %s", path)
         raise
-    return spectrum_from_dataframe(df, name=path.stem)
+    spec = spectrum_from_dataframe(df, name=path.stem)
+    if hv is not None:
+        spec = Spectrum(hv - spec.energy, spec.intensity, name=spec.name,
+                        meta={**spec.meta, "hv_eV": float(hv), "axis": "KE->BE"})
+    return spec
 
 
 def spectrum_from_dataframe(df: pd.DataFrame, name: str = "") -> Spectrum:
